@@ -4,69 +4,17 @@ import(
         "fmt"
         "os/exec"
         "os"
-        "bufio"
         "log"
         "time"
-	"regexp"
 )
 
 var (
+	start time.Time
+	end time.Time
 	minutes int = 120
-	total_count int
-	deployed int
 	result string = ""
+	message string
 )
-
-func check_status() {
-	cmd := exec.Command("juju", "status")
-        stdout, err := cmd.Output()
-        check_error(err)
-
-        file := "status.txt"
-        remove_previous(file)
-        recent_status, err_open := os.OpenFile(file, os.O_RDWR|os.O_CREATE, 0644)
-        check_error(err_open)
-        defer recent_status.Close()
-	_, err_output := fmt.Fprintln(recent_status, string(stdout))
-        check_error(err_output)
-
-}
-
-func verify_deployment() (int,string){
-        tries := 0
-        status_verified := false
-        for (status_verified==false && tries<=minutes){
-                tries++
-		total_count = 0
-		deployed = 0
-		time.Sleep(60*time.Second) //sleep for a minute before checking the juju status
-		check_status()//check status after a minute
-		fin, err_open_file := os.Open("status.txt")
-                check_error(err_open_file)
-                defer fin.Close()
-                scanner := bufio.NewScanner(fin)
-                for scanner.Scan() {
-			total_count += 1
-                        line := scanner.Text()
-			in_progress := regexp.MustCompile(`allocating|pending|waiting|blocked|executing|maintenance`)
-			in_error := regexp.MustCompile(`error`)
-                        if in_error.MatchString(line)==true {
-				return -1, "Error, "
-			}
-			if in_progress.MatchString(line)==false {
-				deployed += 1
-                        }
-                }
-		if total_count == deployed {
-			status_verified = true
-		}
-        }
-        if !status_verified{
-                return -1,"Tries Expired, "
-        } else {
-                return 0,""
-        }
-}
 
 func check_error(e error) {
     if e != nil {
@@ -74,50 +22,58 @@ func check_error(e error) {
     }
 }
 
-func remove_previous(filename string) {
-	if file_exists(filename) {
-		err_file := os.Remove(filename)
-                check_error(err_file)
+func verify_deployment() (int, string) {
+	tries := 0
+        status_verified := false
+        for (status_verified==false && tries<=minutes){
+                tries++
+		time.Sleep(60*time.Second) //sleep for a minute before checking the juju status
+                c2 := exec.Command("grep", "-e allocating", "-e blocked", "-e pending", "-e waiting", "-e maintenance", "-e executing", "-e error")
+                c1 := exec.Command("juju", "status")
+                pipe, _ := c1.StdoutPipe()
+                defer pipe.Close()
+                c2.Stdin = pipe
+                c1.Start()
+                stdout, _ := c2.Output()
+		if string(stdout) == "" {
+			status_verified = true
+		}
+		_ = c1.Wait()
+	}
+	if !status_verified{
+                return -1,"Tries Expired, "
+        } else {
+                return 0,""
         }
 }
 
-func file_exists(fileName string) (bool) {
-    _, err := os.Stat(fileName)
-    if os.IsNotExist(err) {
-        return false
-    } else {
-            return true
-    }
-}
-
 func deploy_script() {
-	cmd := exec.Command("/bin/sh","-x", "deploy-contrail.sh", os.Args[1], os.Args[2])
+        cmd := exec.Command("/bin/sh","-x", "deploy-contrail.sh", os.Args[1], os.Args[2])
         err := cmd.Run()
         check_error(err)
 }
 
 func juju_deployment(){
-	start := time.Now()
+	start = time.Now()
 	deploy_script()
-        return_code,return_message := verify_deployment()
-	end := time.Now()
-	elapsed_time := end.Sub(start)
+	return_code, return_message := verify_deployment()
+	end = time.Now()
 
         if return_code == -1{
-                return_message += "Failed deployment\n"
+                message = return_message + "Failed deployment\n"
         } else {
-                return_message += "Successfully deployed\n"
+                message = return_message + "Successfully deployed\n"
         }
-	result += "\nJuju deployment - " + os.Args[1] + " " + os.Args[2] + "\n"
-	result += return_message
-	result += "\nStarted at " + start.String()
-	result += "\nEnded at " + end.String()
-	result += "\nTime taken = " + elapsed_time.String()
 }
 
 func write_result() {
+	result += "\nJuju deployment - " + os.Args[1] + " " + os.Args[2] + "\n" + message
+	result += "\nStarted at " + start.String() + "\nEnded at " + end.String() + "\nTime taken = " + end.Sub(start).String()
 	file := "result.txt"
-        remove_previous(file)
+	if _, err := os.Stat(file); !os.IsNotExist(err) {
+		err_file := os.Remove(file)
+                check_error(err_file)
+        }
         output, err_open := os.OpenFile(file, os.O_RDWR|os.O_CREATE, 0644)
         check_error(err_open)
         defer output.Close()
