@@ -4,6 +4,7 @@ Required files:
 2. deploy-contrail.sh
 3. Atleast one bundle yaml file: contrail-docker-bundle-queens.yaml or contrail-docker-bundle-train.yaml
 
+> Deploy from inside tf-charms
 
 Command line execution:
 -----------------------
