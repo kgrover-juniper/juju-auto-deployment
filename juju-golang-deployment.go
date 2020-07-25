@@ -12,7 +12,6 @@ var (
 	start time.Time
 	end time.Time
 	minutes int = 120
-	result string = ""
 	message string
 )
 
@@ -60,14 +59,14 @@ func juju_deployment(){
 	end = time.Now()
 
         if return_code == -1{
-                message = return_message + "Failed deployment\n"
+                message = return_message + "Failed deployment"
         } else {
-                message = return_message + "Successfully deployed\n"
+                message = return_message + "Successfully deployed"
         }
 }
 
 func write_result() {
-	result += "\nJuju deployment - " + os.Args[1] + " " + os.Args[2] + "\n" + message
+	result := "\nJuju deployment - " + os.Args[1] + " " + os.Args[2] + "\n" + message
 	result += "\nStarted at " + start.String() + "\nEnded at " + end.String() + "\nTime taken = " + end.Sub(start).String()
 	file := "result.txt"
 	if _, err := os.Stat(file); !os.IsNotExist(err) {
