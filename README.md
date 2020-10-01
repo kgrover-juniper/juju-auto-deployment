@@ -1,16 +1,15 @@
 # juju-auto-deployment
 Required files:
-1. juju-golang-deployment.go OR juju-python-deployment.py
+1. juju-golang-deployment.go
 2. deploy-contrail.sh
-3. Atleast one bundle yaml file: contrail-docker-bundle-queens.yaml or contrail-docker-bundle-train.yaml
+3. Atleast one bundle yaml file: contrail-docker-bundle-queens.yaml or contrail-docker-bundle-train.yaml 
 
 > Deploy from inside tf-charms
 
 Command line execution:
 -----------------------
 go run juju-golang-deployment.go 'openstack-version' 'contrail-build'
- OR 
- python juju-python-deployment.py 'openstack-version' 'contrail-build' 
+
 
 'openstack-version'
  queens
