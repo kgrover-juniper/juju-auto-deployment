@@ -1,4 +1,4 @@
-# juju-auto-deployment
+# Golang juju-auto-deployment
 Required files:
 1. juju-golang-deployment.go
 2. deploy-contrail.sh
