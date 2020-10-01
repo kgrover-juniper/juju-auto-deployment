@@ -1,0 +1,249 @@
+series: focal
+services:
+  ubuntu:
+    charm: cs:focal/ubuntu
+    num_units: 2
+    to:
+      - "1"
+      - "2"
+  ubuntu-csn:
+    charm: cs:focal/ubuntu
+    num_units: 1
+    to: 
+      - "3"
+  contrail-agent-csn:
+    charm: ./contrail-agent
+    options:
+      docker-registry: "svl-artifactory.juniper.net/contrail-nightly"
+      docker-registry-insecure: "true"
+      image-tag: "master-latest"
+      vhost-gateway: auto
+      csn-mode: tsn-no-forwarding
+  ntp:
+    charm: cs:focal/ntp
+    num_units: 0
+    options:
+      source: "10.84.5.101"
+  mysql:
+    charm: cs:bionic/percona-cluster
+    series: bionic
+    options:
+      dataset-size: 15%
+      max-connections: 10000
+      root-password: password
+      sst-password: password
+    num_units: 1
+    to: [ "lxd:1" ]
+  rabbitmq-server:
+    charm: cs:focal/rabbitmq-server
+    num_units: 1
+    to: [ "lxd:1" ]
+  heat:
+    charm: cs:focal/heat
+    expose: true
+    num_units: 1
+    options:
+      openstack-origin: distro
+      region: RegionOne
+    to: [ "2" ]
+  keystone:
+    charm: cs:focal/keystone
+    expose: true
+    options:
+      preferred-api-version: 3
+      admin-password: password
+      admin-role: admin
+      openstack-origin: distro
+      region: RegionOne
+      #region: Juniper
+    num_units: 1
+    to: [ "lxd:1" ]
+  nova-cloud-controller:
+    charm: cs:focal/nova-cloud-controller
+    expose: true
+    options:
+      network-manager: Neutron
+      openstack-origin: distro
+      region: RegionOne
+      #region: Juniper
+    num_units: 1
+    to: [ "lxd:1" ]
+  neutron-api:
+    charm: cs:focal/neutron-api
+    series: focal
+    expose: true
+    options:
+      manage-neutron-plugin-legacy-mode: false
+      openstack-origin: distro
+      region: RegionOne
+      #region: Juniper
+    num_units: 1
+    to: [ "2" ]
+  glance:
+    charm: cs:focal/glance
+    expose: true
+    num_units: 1
+    options:
+      openstack-origin: distro
+      region: RegionOne
+    #region: Juniper
+    to: [ "lxd:1" ]
+  openstack-dashboard:
+    charm: cs:focal/openstack-dashboard
+    expose: true
+    num_units: 1
+    options:
+      openstack-origin: distro
+    to: [ "lxd:1" ]
+  nova-compute:
+    charm: cs:focal/nova-compute
+    expose: true
+    num_units: 1
+    options:
+      openstack-origin: distro
+    to: [ "2" ]
+  contrail-openstack:
+    charm: ./contrail-openstack
+    expose: true
+    series: focal
+    num_units: 0
+    options:
+      docker-registry: "svl-artifactory.juniper.net/contrail-nightly"
+      docker-registry-insecure: "true"
+      image-tag: "master-latest"
+  contrail-agent:
+    charm: ./contrail-agent
+    expose: true
+    num_units: 0
+    series: focal
+    options:
+      log-level: "SYS_DEBUG"
+      docker-registry: "svl-artifactory.juniper.net/contrail-nightly"
+      docker-registry-insecure: "true"
+      image-tag: "master-latest"
+  contrail-analytics:
+    charm: ./contrail-analytics
+    expose: true
+    num_units: 1
+    series: focal
+    options:
+      min-cluster-size: 1
+      log-level: "SYS_DEBUG"
+      docker-registry: "svl-artifactory.juniper.net/contrail-nightly"
+      docker-registry-insecure: "true"
+      image-tag: "master-latest"
+    to: [ "1" ]
+  contrail-analyticsdb:
+    charm: ./contrail-analyticsdb
+    expose: true
+    num_units: 1
+    series: focal
+    options:
+      min-cluster-size: 1
+      log-level: "SYS_DEBUG"
+      cassandra-minimum-diskgb: "4"
+      cassandra-jvm-extra-opts: "-Xms4g -Xmx4g"
+      docker-registry: "svl-artifactory.juniper.net/contrail-nightly"
+      docker-registry-insecure: "true"
+      image-tag: "master-latest"
+    to: [ "1"]
+  contrail-controller:
+    charm: ./contrail-controller
+    expose: true
+    num_units: 1
+    series: focal
+    options:
+      log-level: "SYS_DEBUG"
+      cassandra-minimum-diskgb: "4"
+      cassandra-jvm-extra-opts: "-Xms1g -Xmx2g"
+      docker-registry: "svl-artifactory.juniper.net/contrail-nightly"
+      docker-registry-insecure: "true"
+      #data-network: eno2
+      min-cluster-size: 1
+      image-tag: "master-latest"
+    to: [ "1"]
+  contrail-keystone-auth:
+    charm: ./contrail-keystone-auth
+    expose: true
+    series: focal
+    num_units: 1
+    to: [ "lxd:1" ]
+  placement:
+    charm: cs:focal/placement
+    expose: true
+    num_units: 1
+    options:
+      openstack-origin: distro
+      region: RegionOne
+    to: [ "lxd:1" ]
+  easyrsa:
+    #charm: cs:focal/easyrsa
+    charm: cs:~containers/easyrsa
+    num_units: 1
+    to: [ "lxd:1" ]
+relations:
+  # openstack
+  - [ "ubuntu", "ntp" ]
+  - [ "ubuntu-csn", "ntp" ]
+  - [ "keystone", "mysql" ]
+  - [ "glance", "mysql" ]
+  - [ "glance", "keystone" ]
+  - [ "placement", "mysql" ]
+  - [ "placement", "keystone" ]
+  - [ "placement", "nova-cloud-controller" ]
+  - [ "nova-cloud-controller", "keystone" ]
+  - [ "nova-cloud-controller", "glance" ]
+  - [ "nova-cloud-controller:shared-db", "mysql:shared-db" ]
+  - [ "nova-cloud-controller:amqp", "rabbitmq-server:amqp" ]
+  - [ "neutron-api", "mysql" ]
+  - [ "neutron-api", "rabbitmq-server" ]
+  - [ "neutron-api", "nova-cloud-controller" ]
+  - [ "neutron-api", "keystone" ]
+  - [ "nova-compute:amqp", "rabbitmq-server:amqp" ]
+  - [ "nova-compute", "glance" ]
+  - [ "nova-compute", "nova-cloud-controller" ]
+  - [ "openstack-dashboard:identity-service", "keystone" ]
+  - [ "heat", "mysql" ]
+  - [ "heat", "rabbitmq-server" ]
+  - [ "heat", "keystone" ]
+
+  #contrail
+  - [ "ubuntu-csn", "contrail-agent-csn" ]
+  - [ "contrail-controller", "contrail-agent" ]
+  - [ "contrail-controller", "contrail-agent-csn" ]
+  - [ "contrail-keystone-auth", "keystone" ]
+  - [ "contrail-controller", "contrail-keystone-auth" ]
+  - [ "contrail-analytics", "contrail-analyticsdb" ]
+  - [ "contrail-controller", "contrail-analytics" ] #Contrail Analytics is prerequisite service to deploy
+  - [ "contrail-controller", "contrail-analyticsdb" ]
+  - [ "contrail-openstack", "nova-compute" ]
+  - [ "contrail-openstack", "neutron-api" ]
+  - [ "contrail-openstack", "heat" ]
+  - [ "contrail-openstack", "contrail-controller" ]
+  - [ "contrail-agent:juju-info", "nova-compute:juju-info" ]
+  - [ "easyrsa:client", "contrail-controller" ]
+  - [ "easyrsa:client", "contrail-analytics" ]
+  - [ "easyrsa:client", "contrail-analyticsdb" ]
+  - [ "easyrsa:client", "contrail-agent" ] #Contrail agent charm supports relation to easyrsa charm to obtain certificates for XMPP and Sandesh connections
+  - [ "easyrsa:client", "contrail-agent-csn" ] #Contrail agent charm supports relation to easyrsa charm to obtain certificates for XMPP and Sandesh connections
+
+  - - easyrsa:client
+    - contrail-controller:tls-certificates
+  - - easyrsa:client
+    - contrail-analytics:tls-certificates
+  - - easyrsa:client
+    - contrail-analyticsdb:tls-certificates
+  - - easyrsa:client
+    - contrail-agent:tls-certificates
+  - - easyrsa:client
+    - contrail-agent-csn:tls-certificates
+machines:
+  "1":
+    series: focal
+    constraints: tags=contrail-controller
+  "2":
+    series: focal
+    constraints: tags=compute
+  "3":
+    series: focal
+    constraints: tags=csn
