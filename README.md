@@ -22,5 +22,5 @@ go run juju-golang-deployment.go 'openstack-version' 'contrail-build'
  Output:
  -------
  result.txt
- #Comment on/off write_result() in main() of juju-golang-deployment.go/juju-python-deployment.py
+ #Comment on/off write_result() in main() of juju-golang-deployment.go
 
